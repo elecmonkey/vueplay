@@ -5,8 +5,5 @@ export default defineConfig({
   plugins: [vueplay()],
   server: {
     port: 9560
-  },
-  build: {
-    minify: false
   }
 });

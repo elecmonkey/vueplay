@@ -15,8 +15,8 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsdown src/index.ts --format esm --dts --outDir dist",
-    "dev": "tsdown src/index.ts --format esm --dts --outDir dist --watch"
+    "build": "tsdown",
+    "dev": "tsdown --watch"
   },
   "dependencies": {
     "@vueplay/compiler-sfc": "workspace:*",
