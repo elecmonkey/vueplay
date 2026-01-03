@@ -248,6 +248,25 @@ type ParserContext = {
   source: string;
 };
 
+const VOID_TAGS = new Set([
+  "area",
+  "base",
+  "br",
+  "col",
+  "embed",
+  "hr",
+  "img",
+  "input",
+  "link",
+  "meta",
+  "param",
+  "source",
+  "track",
+  "wbr",
+]);
+
+const RAWTEXT_TAGS = new Set(["script", "style", "textarea", "title"]);
+
 function compileTemplateToVNode(template: string, scopeId: string) {
   if (!template) return "null";
   const ast = parseTemplate(template);
@@ -322,12 +341,21 @@ function parseText(context: ParserContext): TemplateNode | null {
 
 function parseElement(context: ParserContext, ancestors: string[]): TemplateNode {
   const element = parseTag(context);
-  if (element.isSelfClosing) {
+  if (element.isSelfClosing || VOID_TAGS.has(element.tag)) {
     return {
       type: "Element",
       tag: element.tag,
       props: element.props,
       children: [],
+    };
+  }
+  if (RAWTEXT_TAGS.has(element.tag)) {
+    const rawText = parseRawText(context, element.tag);
+    return {
+      type: "Element",
+      tag: element.tag,
+      props: element.props,
+      children: rawText ? [{ type: "Text", content: rawText }] : [],
     };
   }
   ancestors.push(element.tag);
@@ -402,6 +430,19 @@ function parseAttributeValue(context: ParserContext) {
   const match = /^[^\t\r\n\f >]+/.exec(context.source);
   const content = match ? match[0] : "";
   advanceBy(context, content.length);
+  return content;
+}
+
+function parseRawText(context: ParserContext, tag: string) {
+  const closeTag = `</${tag}>`;
+  const closeIndex = context.source.indexOf(closeTag);
+  if (closeIndex === -1) {
+    const content = context.source;
+    context.source = "";
+    return content;
+  }
+  const content = context.source.slice(0, closeIndex);
+  advanceBy(context, closeIndex + closeTag.length);
   return content;
 }
 
