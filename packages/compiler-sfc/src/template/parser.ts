@@ -1,4 +1,9 @@
-import type { AttributeNode, ParserContext, TemplateNode } from "../types";
+import type {
+  Attribute,
+  AttributeNode,
+  ParserContext,
+  TemplateNode,
+} from "../types";
 
 const VOID_TAGS = new Set([
   "area",
@@ -160,7 +165,7 @@ function parseAttributes(context: ParserContext) {
       advanceBy(context, eqMatch[0].length);
       value = parseAttributeValue(context);
     }
-    props.push({ name, value });
+    props.push(parseAttributeNode(name, value));
     advanceSpaces(context);
   }
   return props;
@@ -186,6 +191,55 @@ function parseAttributeValue(context: ParserContext) {
   const content = match ? match[0] : "";
   advanceBy(context, content.length);
   return content;
+}
+
+function parseAttributeNode(name: string, value?: string): AttributeNode {
+  if (name.startsWith("@")) {
+    const { arg, modifiers } = parseArgAndModifiers(name.slice(1));
+    return {
+      type: "Directive",
+      name: "on",
+      arg,
+      exp: value,
+      modifiers,
+    };
+  }
+  if (name.startsWith(":")) {
+    const { arg, modifiers } = parseArgAndModifiers(name.slice(1));
+    return {
+      type: "Directive",
+      name: "bind",
+      arg,
+      exp: value,
+      modifiers,
+    };
+  }
+  if (name.startsWith("v-")) {
+    const raw = name.slice(2);
+    const [dirName, argAndMods] = raw.split(":", 2);
+    const { arg, modifiers } = parseArgAndModifiers(argAndMods ?? "");
+    return {
+      type: "Directive",
+      name: dirName,
+      arg,
+      exp: value,
+      modifiers,
+    };
+  }
+  const attr: Attribute = {
+    type: "Attribute",
+    name,
+    value,
+  };
+  return attr;
+}
+
+function parseArgAndModifiers(input: string) {
+  if (!input) return { arg: undefined, modifiers: undefined as string[] | undefined };
+  const parts = input.split(".");
+  const arg = parts.shift();
+  const modifiers = parts.length ? parts : undefined;
+  return { arg, modifiers };
 }
 
 function parseRawText(context: ParserContext, tag: string) {

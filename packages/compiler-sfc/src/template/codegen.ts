@@ -1,9 +1,11 @@
 import type { AttributeNode, TemplateNode } from "../types";
 import { parseTemplate } from "./parser";
+import { transformTemplate } from "./transform";
 
 export function compileTemplateToVNode(template: string, scopeId: string) {
   if (!template) return "null";
   const ast = parseTemplate(template);
+  transformTemplate(ast);
   if (ast.length === 1) {
     return genNode(ast[0], scopeId);
   }
@@ -17,33 +19,31 @@ function genNode(node: TemplateNode, scopeId: string): string {
   if (node.type === "Interpolation") {
     return `(${node.content})`;
   }
-  const props = genProps(node.props, scopeId);
-  const children = genChildren(node.children, scopeId);
+  return genElement(node, scopeId);
+}
+
+function genElement(node: Extract<TemplateNode, { type: "Element" }>, scopeId: string) {
   const tag = isComponentTag(node.tag)
     ? resolveComponentTag(node.tag)
     : JSON.stringify(node.tag);
-  const staticFlag = isStaticNode(node);
-  return staticFlag
-    ? `h(${tag}, ${props}, ${children}, true)`
-    : `h(${tag}, ${props}, ${children})`;
+  const props = genProps(node, scopeId);
+  const children = genChildren(node.children, scopeId);
+  const base = `h(${tag}, ${props}, ${children}${
+    isStaticNode(node) ? ", true" : ""
+  })`;
+  const withIf = node.ifCondition ? `(${node.ifCondition}) ? ${base} : null` : base;
+  if (node.forSource) {
+    const value = node.forValue && node.forValue.length ? node.forValue : "item";
+    return `(${node.forSource}).map((${value}) => ${withIf})`;
+  }
+  return withIf;
 }
 
-function genProps(props: AttributeNode[], scopeId: string) {
+function genProps(node: Extract<TemplateNode, { type: "Element" }>, scopeId: string) {
+  const props = node.codegenProps ?? [];
   const entries = props.map((prop) => {
-    if (prop.name.startsWith("@")) {
-      const eventName = "on" + capitalize(prop.name.slice(1));
-      const value = prop.value ? prop.value : "() => {}";
-      return `${JSON.stringify(eventName)}: ${value}`;
-    }
-    if (prop.name.startsWith(":")) {
-      const name = prop.name.slice(1);
-      const value = prop.value ? prop.value : "undefined";
-      return `${JSON.stringify(name)}: ${value}`;
-    }
-    if (prop.value == null) {
-      return `${JSON.stringify(prop.name)}: true`;
-    }
-    return `${JSON.stringify(prop.name)}: ${JSON.stringify(prop.value)}`;
+    const value = prop.isExpression ? prop.value : JSON.stringify(prop.value);
+    return `${JSON.stringify(prop.key)}: ${value}`;
   });
   if (scopeId) {
     entries.push(`${JSON.stringify(scopeId)}: true`);
@@ -88,10 +88,5 @@ function isStaticNode(node: TemplateNode): boolean {
 }
 
 function isDynamicAttr(attr: AttributeNode) {
-  return attr.name.startsWith("@") || attr.name.startsWith(":");
-}
-
-function capitalize(value: string) {
-  if (!value) return value;
-  return value[0].toUpperCase() + value.slice(1);
+  return attr.type === "Directive";
 }

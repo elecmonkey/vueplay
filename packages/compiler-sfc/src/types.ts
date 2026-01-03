@@ -11,13 +11,39 @@ export type SfcDescriptor = {
 };
 
 export type TemplateNode =
-  | { type: "Element"; tag: string; props: AttributeNode[]; children: TemplateNode[] }
+  | {
+      type: "Element";
+      tag: string;
+      props: AttributeNode[];
+      children: TemplateNode[];
+      codegenProps?: CodegenProp[];
+      ifCondition?: string;
+      forSource?: string;
+      forValue?: string;
+    }
   | { type: "Text"; content: string }
   | { type: "Interpolation"; content: string };
 
-export type AttributeNode = {
+export type AttributeNode = Attribute | DirectiveNode;
+
+export type Attribute = {
+  type: "Attribute";
   name: string;
   value?: string;
+};
+
+export type DirectiveNode = {
+  type: "Directive";
+  name: string;
+  arg?: string;
+  exp?: string;
+  modifiers?: string[];
+};
+
+export type CodegenProp = {
+  key: string;
+  value: string;
+  isExpression: boolean;
 };
 
 export type ParserContext = {

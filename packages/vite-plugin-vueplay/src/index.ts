@@ -62,11 +62,7 @@ async function scopeCss(css: string, scopeId: string) {
               const insertAt = findInsertPosition(currentCompound);
               const attr = selectorParser.attribute({
                 attribute: scopeId,
-                value: "",
-                raws: {
-                  value: "",
-                },
-              });
+              } as { attribute: string });
               if (insertAt) {
                 insertAt.parent?.insertAfter(insertAt, attr);
               } else {
