@@ -458,7 +458,10 @@ function genNode(node: TemplateNode, scopeId: string): string {
   const tag = isComponentTag(node.tag)
     ? resolveComponentTag(node.tag)
     : JSON.stringify(node.tag);
-  return `h(${tag}, ${props}, ${children})`;
+  const staticFlag = isStaticNode(node);
+  return staticFlag
+    ? `h(${tag}, ${props}, ${children}, true)`
+    : `h(${tag}, ${props}, ${children})`;
 }
 
 function genProps(props: AttributeNode[], scopeId: string) {
@@ -521,4 +524,19 @@ function toPascalCase(tag: string) {
     .filter(Boolean)
     .map((part) => part[0]?.toUpperCase() + part.slice(1))
     .join("");
+}
+
+function isStaticNode(node: TemplateNode): boolean {
+  if (node.type === "Interpolation") return false;
+  if (node.type === "Text") return true;
+  if (isComponentTag(node.tag)) return false;
+  if (node.props.some(isDynamicAttr)) return false;
+  for (const child of node.children) {
+    if (!isStaticNode(child)) return false;
+  }
+  return true;
+}
+
+function isDynamicAttr(attr: AttributeNode) {
+  return attr.name.startsWith("@") || attr.name.startsWith(":");
 }

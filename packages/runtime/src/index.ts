@@ -10,6 +10,7 @@ export type VNode = {
   children?: VNodeChildren;
   el?: Node | null;
   component?: ComponentInstance;
+  static?: boolean;
 };
 
 export type SetupContext = {
@@ -201,6 +202,7 @@ export function h(
   type: string | Component,
   props?: Record<string, any> | null,
   children?: VNodeChildren,
+  staticFlag?: boolean,
 ): VNode {
   return {
     type,
@@ -208,6 +210,7 @@ export function h(
     children,
     el: null,
     component: undefined,
+    static: staticFlag,
   };
 }
 
@@ -226,6 +229,11 @@ function normalizeVNode(child: VNodeChild): VNode {
 function patch(n1: VNode | VNode[], n2: VNode | VNode[], container: Container) {
   if (Array.isArray(n1) || Array.isArray(n2)) {
     patchArray(Array.isArray(n1) ? n1 : [n1], Array.isArray(n2) ? n2 : [n2], container);
+    return;
+  }
+  if (n2.static) {
+    n2.el = n1.el;
+    n2.component = n1.component;
     return;
   }
   if (n1.type !== n2.type) {
