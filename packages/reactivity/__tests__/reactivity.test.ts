@@ -3,6 +3,7 @@ import {
   effect,
   reactive,
   ref,
+  computed,
   watch,
   watchEffect,
 } from "../src/index";
@@ -146,5 +147,38 @@ describe("watchEffect", () => {
 
     expect(values).toEqual([0, 1, 2]);
     expect(cleanups).toEqual(["cleanup:0", "cleanup:1"]);
+  });
+});
+
+describe("computed", () => {
+  it("is lazy and cached", () => {
+    const state = reactive({ count: 1 });
+    const getter = vi.fn(() => state.count * 2);
+    const doubled = computed(getter);
+
+    expect(getter).toHaveBeenCalledTimes(0);
+    expect(doubled.value).toBe(2);
+    expect(getter).toHaveBeenCalledTimes(1);
+    expect(doubled.value).toBe(2);
+    expect(getter).toHaveBeenCalledTimes(1);
+
+    state.count += 1;
+    expect(getter).toHaveBeenCalledTimes(1);
+    expect(doubled.value).toBe(4);
+    expect(getter).toHaveBeenCalledTimes(2);
+  });
+
+  it("triggers effects on change", () => {
+    const state = reactive({ count: 1 });
+    const doubled = computed(() => state.count * 2);
+    let dummy = 0;
+
+    effect(() => {
+      dummy = doubled.value;
+    });
+
+    expect(dummy).toBe(2);
+    state.count += 1;
+    expect(dummy).toBe(4);
   });
 });
