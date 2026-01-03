@@ -4,11 +4,13 @@ import { isObject } from "./utils";
 
 export class RefImpl<T> {
   private _value: T;
+  private _shallow: boolean;
   dep?: Dep;
   readonly __v_isRef = true;
 
-  constructor(value: T) {
-    this._value = convert(value);
+  constructor(value: T, shallow = false) {
+    this._shallow = shallow;
+    this._value = shallow ? value : convert(value);
   }
 
   get value() {
@@ -18,7 +20,7 @@ export class RefImpl<T> {
 
   set value(newValue: T) {
     if (!Object.is(newValue, this._value)) {
-      this._value = convert(newValue);
+      this._value = this._shallow ? newValue : convert(newValue);
       triggerRefValue(this);
     }
   }
@@ -43,7 +45,11 @@ function triggerRefValue(ref: RefImpl<any>) {
 }
 
 export function ref<T>(value: T) {
-  return new RefImpl(value);
+  return new RefImpl(value, false);
+}
+
+export function shallowRef<T>(value: T) {
+  return new RefImpl(value, true);
 }
 
 export function isRef(value: unknown): value is RefImpl<any> {

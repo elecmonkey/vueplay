@@ -4,6 +4,13 @@ import {
   reactive,
   ref,
   computed,
+  readonly,
+  shallowReactive,
+  shallowRef,
+  unref,
+  proxyRefs,
+  toRef,
+  toRefs,
   watch,
   watchEffect,
 } from "../src/index";
@@ -180,5 +187,90 @@ describe("computed", () => {
     expect(dummy).toBe(2);
     state.count += 1;
     expect(dummy).toBe(4);
+  });
+});
+
+describe("readonly", () => {
+  it("does not track or trigger", () => {
+    const original = { count: 0 };
+    const state = readonly(original);
+    let dummy = 0;
+
+    effect(() => {
+      dummy = (state as any).count;
+    });
+
+    expect(dummy).toBe(0);
+    original.count = 1;
+    expect(dummy).toBe(0);
+    (state as any).count = 2;
+    expect(original.count).toBe(1);
+  });
+});
+
+describe("shallowReactive", () => {
+  it("only proxies the first level", () => {
+    const state = shallowReactive({ nested: { count: 0 } });
+    let dummy = 0;
+
+    effect(() => {
+      dummy = state.nested.count;
+    });
+
+    state.nested.count = 1;
+    expect(dummy).toBe(0);
+    state.nested = { count: 2 };
+    expect(dummy).toBe(2);
+  });
+});
+
+describe("shallowRef", () => {
+  it("does not make inner object reactive", () => {
+    const inner = { count: 0 };
+    const state = shallowRef(inner);
+    let dummy = 0;
+
+    effect(() => {
+      dummy = state.value.count;
+    });
+
+    inner.count = 1;
+    expect(dummy).toBe(0);
+    state.value = { count: 2 };
+    expect(dummy).toBe(2);
+  });
+});
+
+describe("unref", () => {
+  it("unwraps ref values", () => {
+    const count = ref(1);
+    expect(unref(count)).toBe(1);
+    expect(unref(2)).toBe(2);
+  });
+});
+
+describe("proxyRefs", () => {
+  it("unwraps on get and sets through on set", () => {
+    const state = proxyRefs({ count: ref(1), name: "vue" });
+    expect(state.count).toBe(1);
+    state.count = 2;
+    expect(state.count).toBe(2);
+    state.count = ref(3) as any;
+    expect(state.count).toBe(3);
+  });
+});
+
+describe("toRef / toRefs", () => {
+  it("creates refs tied to reactive object", () => {
+    const state = reactive({ count: 0, name: "vue" });
+    const count = toRef(state, "count");
+    const refs = toRefs(state);
+
+    expect(count.value).toBe(0);
+    count.value = 2;
+    expect(state.count).toBe(2);
+
+    refs.name.value = "play";
+    expect(state.name).toBe("play");
   });
 });

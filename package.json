@@ -7,6 +7,7 @@
   "scripts": {
     "type-check": "tsc -b --noEmit",
     "build": "pnpm -r --if-present run build",
+    "test": "vitest run",
     "run-demo": "pnpm -C packages/vue-project dev"
   },
   "author": "Elecmonkey <elecmonkey@hotmail.com>",
