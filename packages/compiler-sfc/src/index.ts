@@ -15,7 +15,9 @@ export { parseSFC };
 
 export function compileSFC(source: string): CompiledSfc {
   const descriptor = parseSFC(source);
-  const { importCode, setupCode } = compileScriptSetup(descriptor.scriptSetup);
+  const { importCode, setupCode, bindings } = compileScriptSetup(
+    descriptor.scriptSetup,
+  );
   const template = descriptor.template.trim();
   const styles = descriptor.styles.map((s) => s.content.trim());
   const hasScoped = descriptor.styles.some((s) => s.scoped);
@@ -24,13 +26,19 @@ export function compileSFC(source: string): CompiledSfc {
     descriptor.scopeId = scopeId;
   }
 
-  const renderBody = `return () => ${compileTemplateToVNode(
+  const templateResult = compileTemplateToVNode(
     template,
     scopeId,
-  )};`;
+    bindings,
+  );
+  const renderBody = `return () => ${templateResult.code};`;
   const setupBody = [setupCode, renderBody].filter(Boolean).join("\n");
+  const needsUnref = templateResult.usesUnref;
 
   const code = [
+    needsUnref
+      ? 'import { unref } from "@vueplay/reactivity";'
+      : "",
     'import { h } from "@vueplay/runtime";',
     importCode,
     "const __sfc__ = {",

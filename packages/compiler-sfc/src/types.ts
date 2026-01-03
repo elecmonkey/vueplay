@@ -10,6 +10,16 @@ export type SfcDescriptor = {
   scopeId?: string;
 };
 
+export type BindingType =
+  | "setup-const"
+  | "setup-let"
+  | "setup-ref"
+  | "props"
+  | "import"
+  | "unknown";
+
+export type BindingMetadata = Map<string, BindingType>;
+
 export type TemplateNode =
   | {
       type: "Element";

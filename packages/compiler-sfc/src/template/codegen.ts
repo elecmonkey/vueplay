@@ -1,33 +1,55 @@
-import type { AttributeNode, TemplateNode } from "../types";
+import type { AttributeNode, BindingMetadata, TemplateNode } from "../types";
 import { parseTemplate } from "./parser";
 import { transformTemplate } from "./transform";
 
-export function compileTemplateToVNode(template: string, scopeId: string) {
-  if (!template) return "null";
+type CodegenContext = {
+  bindings: BindingMetadata;
+  usesUnref: boolean;
+};
+
+export function compileTemplateToVNode(
+  template: string,
+  scopeId: string,
+  bindings: BindingMetadata,
+) {
+  if (!template) {
+    return { code: "null", usesUnref: false };
+  }
+  const context: CodegenContext = { bindings, usesUnref: false };
   const ast = parseTemplate(template);
   transformTemplate(ast);
   if (ast.length === 1) {
-    return genNode(ast[0], scopeId);
+    return {
+      code: genNode(ast[0], scopeId, context),
+      usesUnref: context.usesUnref,
+    };
   }
-  return `[${ast.map((node) => genNode(node, scopeId)).join(", ")}]`;
+  return {
+    code: `[${ast.map((node) => genNode(node, scopeId, context)).join(", ")}]`,
+    usesUnref: context.usesUnref,
+  };
 }
 
-function genNode(node: TemplateNode, scopeId: string): string {
+function genNode(node: TemplateNode, scopeId: string, context: CodegenContext): string {
   if (node.type === "Text") {
     return JSON.stringify(node.content);
   }
   if (node.type === "Interpolation") {
-    return `(${node.content})`;
+    return `(${genInterpolation(node.content, context)})`;
   }
-  return genElement(node, scopeId);
+  return genElement(node, scopeId, context);
 }
 
-function genElement(node: Extract<TemplateNode, { type: "Element" }>, scopeId: string) {
+function genElement(
+  node: Extract<TemplateNode, { type: "Element" }>,
+  scopeId: string,
+  context: CodegenContext,
+) {
   const tag = isComponentTag(node.tag)
     ? resolveComponentTag(node.tag)
     : JSON.stringify(node.tag);
-  const props = genProps(node, scopeId);
-  const children = genChildren(node.children, scopeId);
+  const props = genProps(node, scopeId, context);
+  const children = genChildren(node.children, scopeId, context);
   const base = `h(${tag}, ${props}, ${children}${
     isStaticNode(node) ? ", true" : ""
   })`;
@@ -39,10 +61,16 @@ function genElement(node: Extract<TemplateNode, { type: "Element" }>, scopeId: s
   return withIf;
 }
 
-function genProps(node: Extract<TemplateNode, { type: "Element" }>, scopeId: string) {
+function genProps(
+  node: Extract<TemplateNode, { type: "Element" }>,
+  scopeId: string,
+  context: CodegenContext,
+) {
   const props = node.codegenProps ?? [];
   const entries = props.map((prop) => {
-    const value = prop.isExpression ? prop.value : JSON.stringify(prop.value);
+    const value = prop.isExpression
+      ? genExpression(prop.value, context)
+      : JSON.stringify(prop.value);
     return `${JSON.stringify(prop.key)}: ${value}`;
   });
   if (scopeId) {
@@ -52,9 +80,15 @@ function genProps(node: Extract<TemplateNode, { type: "Element" }>, scopeId: str
   return `{ ${entries.join(", ")} }`;
 }
 
-function genChildren(children: TemplateNode[], scopeId: string) {
+function genChildren(
+  children: TemplateNode[],
+  scopeId: string,
+  context: CodegenContext,
+) {
   if (!children.length) return "null";
-  return `[${children.map((node) => genNode(node, scopeId)).join(", ")}]`;
+  return `[${children
+    .map((node) => genNode(node, scopeId, context))
+    .join(", ")}]`;
 }
 
 function isComponentTag(tag: string) {
@@ -89,4 +123,32 @@ function isStaticNode(node: TemplateNode): boolean {
 
 function isDynamicAttr(attr: AttributeNode) {
   return attr.type === "Directive";
+}
+
+function genInterpolation(exp: string, context: CodegenContext) {
+  const trimmed = exp.trim();
+  if (!isSimpleIdentifier(trimmed)) {
+    return trimmed;
+  }
+  const type = context.bindings.get(trimmed);
+  if (type === "props") {
+    return `__props.${trimmed}`;
+  }
+  if (type === "import") {
+    return trimmed;
+  }
+  context.usesUnref = true;
+  return `unref(${trimmed})`;
+}
+
+function isSimpleIdentifier(exp: string) {
+  return /^[A-Za-z_$][\w$]*$/.test(exp);
+}
+
+function genExpression(exp: string, context: CodegenContext) {
+  const trimmed = exp.trim();
+  if (!isSimpleIdentifier(trimmed)) {
+    return exp;
+  }
+  return genInterpolation(trimmed, context);
 }
