@@ -27,11 +27,13 @@ type LifecycleHook = () => void;
 
 type ComponentInstance = {
   type: Component;
+  props: Record<string, any>;
   setupState: Record<string, any>;
   render?: () => any;
   isMounted: boolean;
   container?: Container;
   subTree?: VNode | VNode[] | null;
+  update?: () => void;
   bm?: LifecycleHook[];
   m?: LifecycleHook[];
   bu?: LifecycleHook[];
@@ -51,6 +53,7 @@ function setCurrentInstance(instance: ComponentInstance | null) {
 function createComponentInstance(type: Component): ComponentInstance {
   return {
     type,
+    props: {},
     setupState: {},
     isMounted: false,
   };
@@ -60,7 +63,7 @@ function setupComponent(instance: ComponentInstance) {
   const { setup } = instance.type;
   if (setup) {
     setCurrentInstance(instance);
-    const setupResult = setup({}, { attrs: {}, emit: () => {} });
+    const setupResult = setup(instance.props, { attrs: {}, emit: () => {} });
     setCurrentInstance(null);
     if (typeof setupResult === "function") {
       instance.render = setupResult;
@@ -150,6 +153,7 @@ function mount(vnode: any, container: Container) {
 
 function mountComponent(vnode: VNode, container: Container) {
   const instance = createComponentInstance(vnode.type as Component);
+  updateProps(instance.props, vnode.props ?? {});
   setupComponent(instance);
   const anchor = document.createElement("div");
   vnode.el = anchor;
@@ -182,6 +186,7 @@ function setupRenderEffect(instance: ComponentInstance, container: Container) {
       scheduler: () => queueJob(runner),
     },
   );
+  instance.update = runner;
 }
 
 export function createApp(rootComponent: Component) {
@@ -356,8 +361,13 @@ function patchComponent(n1: VNode, n2: VNode) {
     }
     return;
   }
+  const instance = n1.component;
   n2.el = n1.el;
-  n2.component = n1.component;
+  n2.component = instance;
+  if (instance) {
+    updateProps(instance.props, n2.props ?? {});
+    instance.update?.();
+  }
 }
 
 function replaceNode(n1: VNode, n2: VNode, container: Container) {
@@ -400,6 +410,17 @@ function patchProp(el: Element, key: string, prev: any, next: any) {
     el.setAttribute(key, "");
   } else {
     el.setAttribute(key, String(next));
+  }
+}
+
+function updateProps(target: Record<string, any>, nextProps: Record<string, any>) {
+  for (const key of Object.keys(target)) {
+    if (!(key in nextProps)) {
+      delete target[key];
+    }
+  }
+  for (const key of Object.keys(nextProps)) {
+    target[key] = nextProps[key];
   }
 }
 
