@@ -1,4 +1,4 @@
-import { effect } from "@vueplay/reactivity";
+import { effect, queueJob } from "@vueplay/reactivity";
 
 type Container = Element | ShadowRoot;
 type VNodeChild = VNode | string | number | null | undefined;
@@ -161,22 +161,27 @@ function mountComponent(vnode: VNode, container: Container) {
 function setupRenderEffect(instance: ComponentInstance, container: Container) {
   instance.container = container;
 
-  effect(() => {
-    if (!instance.isMounted) {
-      invokeHooks(instance.bm);
-      const subTree = instance.render?.();
-      instance.subTree = subTree;
-      render(subTree, container);
-      instance.isMounted = true;
-      invokeHooks(instance.m);
-    } else {
-      invokeHooks(instance.bu);
-      const subTree = instance.render?.();
-      render(subTree, container, instance.subTree ?? null);
-      instance.subTree = subTree;
-      invokeHooks(instance.u);
-    }
-  });
+  const runner = effect(
+    () => {
+      if (!instance.isMounted) {
+        invokeHooks(instance.bm);
+        const subTree = instance.render?.();
+        instance.subTree = subTree;
+        render(subTree, container);
+        instance.isMounted = true;
+        invokeHooks(instance.m);
+      } else {
+        invokeHooks(instance.bu);
+        const subTree = instance.render?.();
+        render(subTree, container, instance.subTree ?? null);
+        instance.subTree = subTree;
+        invokeHooks(instance.u);
+      }
+    },
+    {
+      scheduler: () => queueJob(runner),
+    },
+  );
 }
 
 export function createApp(rootComponent: Component) {

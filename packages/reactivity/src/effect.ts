@@ -5,6 +5,11 @@ export type Dep = Set<ReactiveEffect>;
 let activeEffect: ReactiveEffect | undefined;
 const effectStack: ReactiveEffect[] = [];
 
+const jobQueue = new Set<() => void>();
+let isFlushing = false;
+let currentFlushPromise: Promise<void> | null = null;
+const resolvedPromise = Promise.resolve();
+
 export class ReactiveEffect {
   fn: () => any;
   deps: Dep[] = [];
@@ -77,4 +82,32 @@ export function effect(
   };
   runner.effect = _effect;
   return runner;
+}
+
+function queueFlush() {
+  if (isFlushing) return;
+  isFlushing = true;
+  currentFlushPromise = resolvedPromise.then(() => {
+    try {
+      for (const job of jobQueue) {
+        job();
+      }
+    } finally {
+      jobQueue.clear();
+      isFlushing = false;
+      currentFlushPromise = null;
+    }
+  });
+}
+
+export function queueJob(job: () => void) {
+  if (!jobQueue.has(job)) {
+    jobQueue.add(job);
+    queueFlush();
+  }
+}
+
+export function nextTick(fn?: () => void) {
+  const p = currentFlushPromise ?? resolvedPromise;
+  return fn ? p.then(fn) : p;
 }
