@@ -17,7 +17,8 @@ const VOID_TAGS = new Set([
   "wbr",
 ]);
 
-const RAWTEXT_TAGS = new Set(["script", "style", "textarea", "title"]);
+const RAWTEXT_TAGS = new Set(["script", "style"]);
+const RCDATA_TAGS = new Set(["textarea", "title"]);
 
 export function parseTemplate(source: string) {
   const context: ParserContext = { source };
@@ -99,6 +100,15 @@ function parseElement(context: ParserContext, ancestors: string[]): TemplateNode
       tag: element.tag,
       props: element.props,
       children: rawText ? [{ type: "Text", content: rawText }] : [],
+    };
+  }
+  if (RCDATA_TAGS.has(element.tag)) {
+    const rcdata = parseRcdata(context, element.tag);
+    return {
+      type: "Element",
+      tag: element.tag,
+      props: element.props,
+      children: rcdata ? [{ type: "Text", content: rcdata }] : [],
     };
   }
   ancestors.push(element.tag);
@@ -189,4 +199,8 @@ function parseRawText(context: ParserContext, tag: string) {
   const content = context.source.slice(0, closeIndex);
   advanceBy(context, closeIndex + closeTag.length);
   return content;
+}
+
+function parseRcdata(context: ParserContext, tag: string) {
+  return parseRawText(context, tag);
 }
