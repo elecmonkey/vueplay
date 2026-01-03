@@ -1,4 +1,6 @@
 import type { Plugin } from "vite";
+import postcss from "postcss";
+import selectorParser from "postcss-selector-parser";
 import { compileSFC } from "@vueplay/compiler-sfc";
 
 function cleanId(id: string) {
@@ -9,17 +11,21 @@ export default function vueplayPlugin(): Plugin {
   return {
     name: "vite-plugin-vueplay",
     enforce: "pre",
-    transform(code, id) {
+    async transform(code, id) {
       if (!cleanId(id).endsWith(".play.vue")) return;
       const compiled = compileSFC(code);
       const scopeId = compiled.descriptor.scopeId ?? "";
-      const styles = compiled.descriptor.styles
-        .map((s) =>
-          (s as { content: string; scoped?: boolean }).scoped && scopeId
-            ? scopeCss(s.content, scopeId)
-            : s.content,
+      const styles = (
+        await Promise.all(
+          compiled.descriptor.styles.map((s) => {
+            const scoped = (s as { content: string; scoped?: boolean }).scoped;
+            if (scoped && scopeId) {
+              return scopeCss(s.content, scopeId);
+            }
+            return Promise.resolve(s.content);
+          }),
         )
-        .join("\n");
+      ).join("\n");
       const styleCode = styles
         ? [
             "const __vueplay_style__ = " + JSON.stringify(styles) + ";",
@@ -39,24 +45,74 @@ export default function vueplayPlugin(): Plugin {
   };
 }
 
-function scopeCss(css: string, scopeId: string) {
-  const attr = `[${scopeId}]`;
-  return css.replace(/([^{}]+)\{/g, (full, selector) => {
-    const trimmed = selector.trim();
-    if (!trimmed || trimmed.startsWith("@")) {
-      return full;
+async function scopeCss(css: string, scopeId: string) {
+  const processor = postcss([
+    {
+      postcssPlugin: "vueplay-scope",
+      Rule(rule) {
+        rule.selector = selectorParser((selectors) => {
+          selectors.each((selector) => {
+            let currentCompound: selectorParser.Node[] = [];
+            const commitCompound = () => {
+              if (!currentCompound.length) return;
+              if (hasScopeAttr(currentCompound, scopeId)) {
+                currentCompound = [];
+                return;
+              }
+              const insertAt = findInsertPosition(currentCompound);
+              const attr = selectorParser.attribute({
+                attribute: scopeId,
+                value: "",
+                raws: {
+                  value: "",
+                },
+              });
+              if (insertAt) {
+                insertAt.parent?.insertAfter(insertAt, attr);
+              } else {
+                selector.append(attr);
+              }
+              currentCompound = [];
+            };
+
+            selector.nodes.forEach((node) => {
+              if (node.type === "combinator") {
+                commitCompound();
+                return;
+              }
+              currentCompound.push(node);
+            });
+            commitCompound();
+          });
+        }).processSync(rule.selector);
+      },
+    },
+  ]);
+
+  const result = await processor.process(css, { from: undefined });
+  return result.css;
+}
+
+function hasScopeAttr(nodes: selectorParser.Node[], scopeId: string) {
+  return nodes.some(
+    (node) =>
+      node.type === "attribute" && (node as selectorParser.Attribute).attribute === scopeId,
+  );
+}
+
+function findInsertPosition(nodes: selectorParser.Node[]) {
+  for (let i = nodes.length - 1; i >= 0; i -= 1) {
+    const node = nodes[i];
+    if (node.type === "pseudo" && isPseudoElement(node.value)) {
+      continue;
     }
-    const scoped = trimmed
-      .split(",")
-      .map((sel: string) => {
-        const s = sel.trim();
-        if (!s) return s;
-        if (s.includes(attr)) return s;
-        return `${s}${attr}`;
-      })
-      .join(", ");
-    return `${scoped}{`;
-  });
+    return node;
+  }
+  return nodes[nodes.length - 1] ?? null;
+}
+
+function isPseudoElement(value: string) {
+  return value.startsWith("::") || value === ":before" || value === ":after";
 }
 
 function hashId(id: string) {

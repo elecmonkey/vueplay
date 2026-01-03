@@ -19,12 +19,14 @@
     "dev": "tsdown src/index.ts --format esm --dts --outDir dist --watch"
   },
   "dependencies": {
-    "@vueplay/compiler-sfc": "workspace:*"
+    "@vueplay/compiler-sfc": "workspace:*",
+    "postcss": "^8.5.6",
+    "postcss-selector-parser": "^7.1.1"
   },
   "peerDependencies": {
-    "vite": "^7.0.0"
+    "vite": "^8.0.0"
   },
   "devDependencies": {
-    "vite": "^7.0.0"
+    "vite": "^8.0.0"
   }
 }
