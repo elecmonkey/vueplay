@@ -17,8 +17,8 @@ export default function vueplayPlugin(): Plugin {
       const scopeId = compiled.descriptor.scopeId ?? "";
       const styles = (
         await Promise.all(
-          compiled.descriptor.styles.map((s) => {
-            const scoped = (s as { content: string; scoped?: boolean }).scoped;
+          compiled.descriptor.styles.map((s: { content: string; scoped?: boolean }) => {
+            const scoped = (s).scoped;
             if (scoped && scopeId) {
               return scopeCss(s.content, scopeId);
             }
@@ -62,7 +62,12 @@ async function scopeCss(css: string, scopeId: string) {
               const insertAt = findInsertPosition(currentCompound);
               const attr = selectorParser.attribute({
                 attribute: scopeId,
-              } as { attribute: string });
+                value: "",
+                quoteMark: "\"",
+                raws: {
+                  value: "",
+                },
+              });
               if (insertAt) {
                 insertAt.parent?.insertAfter(insertAt, attr);
               } else {

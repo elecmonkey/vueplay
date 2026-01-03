@@ -2,7 +2,12 @@ import { trackEffects, triggerEffects, type Dep } from "./effect";
 import { reactive } from "./reactive";
 import { isObject } from "./utils";
 
-export class RefImpl<T> {
+export interface Ref<T> {
+  value: T;
+  __v_isRef: true;
+}
+
+export class RefImpl<T> implements Ref<T> {
   private _value: T;
   private _shallow: boolean;
   dep?: Dep;
@@ -52,6 +57,6 @@ export function shallowRef<T>(value: T) {
   return new RefImpl(value, true);
 }
 
-export function isRef(value: unknown): value is RefImpl<any> {
+export function isRef(value: unknown): value is Ref<any> {
   return !!(value && (value as any).__v_isRef);
 }

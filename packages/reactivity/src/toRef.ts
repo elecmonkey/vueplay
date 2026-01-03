@@ -1,4 +1,4 @@
-import { isRef, RefImpl } from "./ref";
+import { isRef, type Ref } from "./ref";
 
 class ObjectRefImpl<T extends object, K extends keyof T> {
   private _object: T;
@@ -22,14 +22,14 @@ class ObjectRefImpl<T extends object, K extends keyof T> {
 export function toRef<T extends object, K extends keyof T>(
   object: T,
   key: K,
-): RefImpl<T[K]> {
+): Ref<T[K]> {
   const value = object[key];
-  if (isRef(value)) return value as RefImpl<T[K]>;
-  return new ObjectRefImpl(object, key) as RefImpl<T[K]>;
+  if (isRef(value)) return value as Ref<T[K]>;
+  return new ObjectRefImpl(object, key);
 }
 
-export function toRefs<T extends object>(object: T): { [K in keyof T]: RefImpl<T[K]> } {
-  const ret = {} as { [K in keyof T]: RefImpl<T[K]> };
+export function toRefs<T extends object>(object: T): { [K in keyof T]: Ref<T[K]> } {
+  const ret = {} as { [K in keyof T]: Ref<T[K]> };
   for (const key in object) {
     ret[key] = toRef(object, key);
   }
