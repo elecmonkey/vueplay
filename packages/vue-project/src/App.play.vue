@@ -2,8 +2,8 @@
   <div class="app">
     <h1>VuePlay</h1>
     <p>Minimal setup + SFC compiler example. {{ message }}</p>
-    <hello-card />
-    <InfoPanel />
+    <hello-card :pop="messageChange" />
+    <InfoPanel :detail="message" />
   </div>
 </template>
 
@@ -12,7 +12,11 @@ import { ref } from "@vueplay/reactivity"
 import HelloCard from "./components/HelloCard.play.vue";
 import InfoPanel from "./components/InfoPanel.play.vue";
 
-const message = "Hello VuePlay";
+const message = ref("Hello VuePlay");
+
+const messageChange = () => {
+  message.value += " wow!";
+}
 </script>
 
 <style>

@@ -5,11 +5,14 @@
     <button @click="handler">
       {{ `Now Loading Status: ${loading.value}` }}
     </button>
+    <button @click="props.pop">pop!!!</button>
   </div>
 </template>
 
 <script setup>
 import { ref } from "@vueplay/reactivity"
+
+const props = defineProps(['pop']);
 
 const text = "Kebab-case component";
 let loading = ref(false);

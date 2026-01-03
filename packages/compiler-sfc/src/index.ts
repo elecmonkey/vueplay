@@ -15,9 +15,8 @@ export { parseSFC };
 
 export function compileSFC(source: string): CompiledSfc {
   const descriptor = parseSFC(source);
-  const { importCode, setupCode, bindings } = compileScriptSetup(
-    descriptor.scriptSetup,
-  );
+  const { importCode, setupCode, bindings, usesDefineProps } =
+    compileScriptSetup(descriptor.scriptSetup);
   const template = descriptor.template.trim();
   const styles = descriptor.styles.map((s) => s.content.trim());
   const hasScoped = descriptor.styles.some((s) => s.scoped);
@@ -42,7 +41,7 @@ export function compileSFC(source: string): CompiledSfc {
     'import { h } from "@vueplay/runtime";',
     importCode,
     "const __sfc__ = {",
-    "  setup() {",
+    `  setup(${usesDefineProps ? "__props" : ""}) {`,
     indent(setupBody, 4),
     "  },",
     "};",

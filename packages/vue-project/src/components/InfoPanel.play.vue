@@ -1,8 +1,8 @@
 <template>
   <section class="panel">
     <h2>InfoPanel</h2>
-    <p>{{ detail }}</p>
-    <p class="count">Now Count: {{ count.value }}</p>
+    <p>{{ props.detail }}</p>
+    <p class="count">Now Count: {{ count }}</p>
     <button @click="add">Add</button>
   </section>
 </template>
@@ -10,8 +10,9 @@
 <script setup>
 import { ref } from "@vueplay/reactivity"
 
-const detail = "CamelCase component";
-let count = ref(0);
+const props = defineProps(['detail']);
+
+const count = ref(0);
 const add = () => {
   count.value++;
 }
