@@ -1,6 +1,7 @@
 import type { Plugin } from "vite";
 import postcss from "postcss";
 import selectorParser from "postcss-selector-parser";
+import MagicString from "magic-string";
 import { compileSFC } from "@vueplay/compiler-sfc";
 
 function cleanId(id: string) {
@@ -37,9 +38,16 @@ export default function vueplayPlugin(): Plugin {
             "}",
           ].join("\n")
         : "";
+      const output = [compiled.code, styleCode].filter(Boolean).join("\n");
+      const magic = new MagicString(code);
+      magic.overwrite(0, code.length, output);
       return {
-        code: [compiled.code, styleCode].filter(Boolean).join("\n"),
-        map: null,
+        code: output,
+        map: magic.generateMap({
+          source: cleanId(id),
+          includeContent: true,
+          hires: true,
+        }),
       };
     },
   };
