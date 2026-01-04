@@ -1,6 +1,7 @@
 import type { AttributeNode, BindingMetadata, TemplateNode } from "../types";
 import { parseTemplate } from "./parser";
 import { transformTemplate } from "./transform";
+import { rewriteExpression } from "./expression";
 
 type CodegenContext = {
   bindings: BindingMetadata;
@@ -126,29 +127,13 @@ function isDynamicAttr(attr: AttributeNode) {
 }
 
 function genInterpolation(exp: string, context: CodegenContext) {
-  const trimmed = exp.trim();
-  if (!isSimpleIdentifier(trimmed)) {
-    return trimmed;
+  const result = rewriteExpression(exp, context.bindings);
+  if (result.usesUnref) {
+    context.usesUnref = true;
   }
-  const type = context.bindings.get(trimmed);
-  if (type === "props") {
-    return `__props.${trimmed}`;
-  }
-  if (type === "import") {
-    return trimmed;
-  }
-  context.usesUnref = true;
-  return `unref(${trimmed})`;
-}
-
-function isSimpleIdentifier(exp: string) {
-  return /^[A-Za-z_$][\w$]*$/.test(exp);
+  return result.code;
 }
 
 function genExpression(exp: string, context: CodegenContext) {
-  const trimmed = exp.trim();
-  if (!isSimpleIdentifier(trimmed)) {
-    return exp;
-  }
-  return genInterpolation(trimmed, context);
+  return genInterpolation(exp, context);
 }

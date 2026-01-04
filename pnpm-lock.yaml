@@ -21,10 +21,13 @@ importers:
   packages/compiler-sfc:
     dependencies:
       '@babel/generator':
-        specifier: ^7.28.3
+        specifier: ^7.28.5
         version: 7.28.5
       '@babel/parser':
-        specifier: ^7.28.3
+        specifier: ^7.28.5
+        version: 7.28.5
+      '@babel/types':
+        specifier: ^7.28.5
         version: 7.28.5
       '@types/babel__generator':
         specifier: ^7.27.0
