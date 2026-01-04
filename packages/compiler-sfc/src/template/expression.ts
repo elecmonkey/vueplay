@@ -161,9 +161,9 @@ export function rewriteExpression(
     return node;
   };
 
-  visit(ast, null, null);
+  const rewritten = visit(ast, null, null);
 
-  return { code: generate(ast).code, usesUnref };
+  return { code: generate((rewritten ?? ast) as t.Node).code, usesUnref };
 }
 
 function isExcludedIdentifier(
