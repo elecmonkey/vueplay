@@ -9,9 +9,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@vueplay/runtime": "workspace:*",
     "@vueplay/reactivity": "workspace:*",
-    "vite-plugin-vueplay": "workspace:*",
-    "vite": "^8.0.0-beta.5"
+    "@vueplay/runtime": "workspace:*",
+    "vite": "^8.0.0-beta.14",
+    "vite-plugin-vueplay": "workspace:*"
   }
 }
