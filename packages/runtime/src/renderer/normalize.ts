@@ -1,6 +1,10 @@
+import { isRef, unref } from "@vueplay/reactivity";
 import type { VNode, VNodeChild } from "../types";
 
 export function normalizeVNode(child: VNodeChild): VNode {
+  if (isRef(child)) {
+    child = unref(child);
+  }
   if (typeof child === "object" && child && "type" in child) {
     return child as VNode;
   }

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { compileTemplateToVNode } from "../src/template/codegen";
+import type { BindingMetadata } from "../src/types";
 
 describe("template codegen", () => {
   it("generates static flags for static subtrees", () => {
@@ -18,7 +19,7 @@ describe("template codegen", () => {
   });
 
   it("handles v-if and event bindings", () => {
-    const bindings = new Map([
+    const bindings: BindingMetadata = new Map([
       ["onClick", "setup-const"],
       ["ok", "setup-const"],
       ["disabled", "setup-const"],

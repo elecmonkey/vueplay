@@ -74,6 +74,7 @@ export function rewriteExpression(
     key: string | number | null,
   ) => {
     if (isExcludedIdentifier(node, parent, key)) return node;
+    if (isRefValueAccess(node, parent)) return node;
     const name = node.name;
     if (isLocal(name)) return node;
 
@@ -164,6 +165,17 @@ export function rewriteExpression(
   const rewritten = visit(ast, null, null);
 
   return { code: generate((rewritten ?? ast) as t.Node).code, usesUnref };
+}
+
+function isRefValueAccess(node: t.Identifier, parent: t.Node | null) {
+  return (
+    parent != null &&
+    t.isMemberExpression(parent) &&
+    parent.object === node &&
+    !parent.computed &&
+    t.isIdentifier(parent.property) &&
+    parent.property.name === "value"
+  );
 }
 
 function isExcludedIdentifier(
