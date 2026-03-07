@@ -11,7 +11,7 @@
   "dependencies": {
     "@vueplay/reactivity": "workspace:*",
     "@vueplay/runtime": "workspace:*",
-    "vite": "^8.0.0-beta.14",
+    "vite": "^8.0.0-beta.16",
     "vite-plugin-vueplay": "workspace:*"
   }
 }

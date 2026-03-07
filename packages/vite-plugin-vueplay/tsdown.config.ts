@@ -4,6 +4,8 @@ export default defineConfig({
   entry: 'src/index.ts',
   minify: true,
   platform: 'node',
-  external: ['vite', '@vueplay/compiler-sfc'],
-  noExternal: [/.*/],
+  deps: {
+    neverBundle: ['vite', '@vueplay/compiler-sfc'],
+    alwaysBundle: [/.*/],
+  },
 })

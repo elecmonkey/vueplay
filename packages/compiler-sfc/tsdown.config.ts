@@ -4,6 +4,8 @@ export default defineConfig({
   entry: 'src/index.ts',
   minify: true,
   platform: 'node',
-  skipNodeModulesBundle: false,
-  noExternal: [/.*/],
+  deps: {
+    skipNodeModulesBundle: false,
+    alwaysBundle: [/.*/],
+  },
 })
