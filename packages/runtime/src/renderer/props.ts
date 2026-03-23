@@ -1,4 +1,7 @@
 export function patchProp(el: Element, key: string, prev: any, next: any) {
+  if (key === "key") {
+    return;
+  }
   if (key.startsWith("on")) {
     const event = key.slice(2).toLowerCase();
     if (prev) {

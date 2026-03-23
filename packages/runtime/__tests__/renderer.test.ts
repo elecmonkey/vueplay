@@ -89,4 +89,64 @@ describe("renderer", () => {
     
     expect(clicked).toBe(true);
   });
+
+  it("should reorder keyed children and reuse nodes", async () => {
+    const root = document.createElement("div");
+    const order = ref(["A", "B", "C", "D"]);
+
+    const Component = {
+      render() {
+        return h(
+          "ul",
+          null,
+          order.value.map((item) => h("li", { key: item }, item)),
+        );
+      },
+    };
+
+    const app = createApp(Component);
+    app.mount(root);
+
+    const beforeNodes = Array.from(root.querySelectorAll("li"));
+    expect(beforeNodes.map((node) => node.textContent)).toEqual(["A", "B", "C", "D"]);
+
+    order.value = ["D", "B", "A", "C"];
+    await nextTick();
+
+    const afterNodes = Array.from(root.querySelectorAll("li"));
+    expect(afterNodes.map((node) => node.textContent)).toEqual(["D", "B", "A", "C"]);
+    expect(afterNodes[0]).toBe(beforeNodes[3]);
+    expect(afterNodes[1]).toBe(beforeNodes[1]);
+    expect(afterNodes[2]).toBe(beforeNodes[0]);
+    expect(afterNodes[3]).toBe(beforeNodes[2]);
+  });
+
+  it("should handle keyed insertions and removals", async () => {
+    const root = document.createElement("div");
+    const order = ref(["A", "B", "C"]);
+
+    const Component = {
+      render() {
+        return h(
+          "ul",
+          null,
+          order.value.map((item) => h("li", { key: item }, item)),
+        );
+      },
+    };
+
+    const app = createApp(Component);
+    app.mount(root);
+
+    const beforeNodes = Array.from(root.querySelectorAll("li"));
+    expect(beforeNodes.map((node) => node.textContent)).toEqual(["A", "B", "C"]);
+
+    order.value = ["B", "D", "A"];
+    await nextTick();
+
+    const afterNodes = Array.from(root.querySelectorAll("li"));
+    expect(afterNodes.map((node) => node.textContent)).toEqual(["B", "D", "A"]);
+    expect(afterNodes[0]).toBe(beforeNodes[1]);
+    expect(afterNodes[2]).toBe(beforeNodes[0]);
+  });
 });

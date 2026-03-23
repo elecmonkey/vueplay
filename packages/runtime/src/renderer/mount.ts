@@ -4,24 +4,24 @@ import { setupRenderEffect } from "./renderEffect";
 import { normalizeVNode } from "./normalize";
 import { patchProp, updateProps } from "./props";
 
-export function mount(vnode: any, container: Container) {
+export function mount(vnode: any, container: Container, anchor: Node | null = null) {
   if (vnode == null) return;
   if (Array.isArray(vnode)) {
     const normalized = vnode.map((child) => normalizeVNode(child));
     for (const child of normalized) {
-      mount(child, container);
+      mount(child, container, anchor);
     }
     return;
   }
   if (typeof vnode === "string" || typeof vnode === "number") {
     const textVNode = normalizeVNode(vnode);
-    mount(textVNode, container);
+    mount(textVNode, container, anchor);
     return;
   }
   if (typeof vnode === "object" && vnode.type === "#text") {
     const textNode = document.createTextNode(String(vnode.children ?? ""));
     vnode.el = textNode;
-    container.appendChild(textNode);
+    container.insertBefore(textNode, anchor);
     return;
   }
   if (typeof vnode === "object" && typeof vnode.type === "string") {
@@ -47,23 +47,23 @@ export function mount(vnode: any, container: Container) {
     } else {
       mount(children, el);
     }
-    container.appendChild(el);
+    container.insertBefore(el, anchor);
     return;
   }
   if (typeof vnode === "object" && typeof vnode.type === "object") {
-    mountComponent(vnode, container);
+    mountComponent(vnode, container, anchor);
   }
 }
 
-export function mountComponent(vnode: VNode, container: Container) {
+export function mountComponent(vnode: VNode, container: Container, anchor: Node | null = null) {
   const instance = createComponentInstance(vnode.type as Component);
   updateProps(instance.props, vnode.props ?? {});
   setupComponent(instance);
-  const anchor = document.createElement("div");
-  vnode.el = anchor;
+  const mountPoint = document.createElement("div");
+  vnode.el = mountPoint;
   vnode.component = instance;
-  container.appendChild(anchor);
-  setupRenderEffect(instance, anchor);
+  container.insertBefore(mountPoint, anchor);
+  setupRenderEffect(instance, mountPoint);
 }
 
 export function removeNode(vnode: VNode, container: Container) {
